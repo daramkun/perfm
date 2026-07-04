@@ -20,6 +20,7 @@ $ perfm [options] -- <application filename> [application arguments]
 | --network | measure Network I/O usage |
 | --time | measure (end - start) time |
 | --freq=<time> | frequency for measuring (5s, 1m, ...) |
+| --split-subproc | measure subprocesses as separate per-PID rows instead of aggregating them |
 
 ### support operating systems
 - Windows
@@ -43,6 +44,10 @@ perfm --as-md=sample.md --file --network --gpu --vmem -- <application filename>
 
 When `--as-csv` is used without a path, output is written to `perfm.csv`. When
 `--as-md` is used without a path, output is written to `perfm.md`.
+
+By default, process metrics are aggregated for the target process and its
+currently running subprocesses. Use `--split-subproc` to emit separate per-PID
+rows for subprocesses observed at each sample point.
 
 ### current metric support notes
 GPU usage and GPU VRAM metrics are represented in the CLI and output schema, but

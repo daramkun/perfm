@@ -61,6 +61,14 @@ void parser_rejects_invalid_frequency()
     assert(!parsed.ok);
     assert(parsed.error.find("--freq") != std::string::npos);
 }
+
+void parser_accepts_split_subprocess_option()
+{
+    auto parsed = perfm::parse_options({"--split-subproc", "--cpu", "--", "tool"});
+    assert(parsed.ok);
+    assert(parsed.value.split_subprocesses);
+    assert(contains_metric(parsed.value, perfm::metric_kind::cpu));
+}
 }
 
 void run_parser_tests()
@@ -68,4 +76,5 @@ void run_parser_tests()
     parser_preserves_target_arguments_after_separator();
     parser_uses_default_output_paths_later();
     parser_rejects_invalid_frequency();
+    parser_accepts_split_subprocess_option();
 }

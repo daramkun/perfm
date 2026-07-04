@@ -1,9 +1,9 @@
 #include "collectors/memory_collector.h"
+#include "process/process_tree.h"
 
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <unistd.h>
 
 namespace perfm
 {
@@ -14,16 +14,29 @@ class memory_collector final : public collector
 public:
     void start(std::uint64_t pid) override
     {
-        pid_ = pid;
-        page_size_ = sysconf(_SC_PAGESIZE);
+        start(pid, collector_scope::process_tree);
+    }
+
+    void start(std::uint64_t pid, collector_scope scope) override
+    {
+        root_pid_ = pid;
+        scope_ = scope;
     }
 
     std::vector<metric_value> sample() override
     {
+        unsigned long long resident_bytes = 0;
+        unsigned long long virtual_bytes = 0;
+        for (const auto pid : target_pids())
+        {
+            resident_bytes += read_status_value(pid, "VmRSS:");
+            virtual_bytes += read_status_value(pid, "VmSize:");
+        }
+
         return {
             make_metric("memory_total_bytes", metric_unit::bytes, static_cast<double>(read_total_memory())),
-            make_metric("memory_resident_bytes", metric_unit::bytes, static_cast<double>(read_status_value("VmRSS:"))),
-            make_metric("memory_virtual_bytes", metric_unit::bytes, static_cast<double>(read_status_value("VmSize:"))),
+            make_metric("memory_resident_bytes", metric_unit::bytes, static_cast<double>(resident_bytes)),
+            make_metric("memory_virtual_bytes", metric_unit::bytes, static_cast<double>(virtual_bytes)),
         };
     }
 
@@ -32,18 +45,34 @@ public:
     }
 
 private:
-    unsigned long long read_status_value(const std::string& key) const
+    std::vector<std::uint64_t> target_pids() const
     {
-        std::ifstream input("/proc/" + std::to_string(pid_) + "/status");
-        std::string label;
-        unsigned long long value = 0;
-        std::string unit;
-        while (input >> label >> value >> unit)
+        if (scope_ == collector_scope::process_only)
         {
-            if (label == key)
+            return {root_pid_};
+        }
+        return enumerate_process_tree(root_pid_);
+    }
+
+    unsigned long long read_status_value(std::uint64_t pid, const std::string& key) const
+    {
+        std::ifstream input("/proc/" + std::to_string(pid) + "/status");
+        std::string line;
+        while (std::getline(input, line))
+        {
+            if (line.rfind(key, 0) != 0)
+            {
+                continue;
+            }
+
+            std::istringstream fields(line.substr(key.size()));
+            unsigned long long value = 0;
+            std::string unit;
+            if (fields >> value >> unit)
             {
                 return value * 1024;
             }
+            return 0;
         }
         return 0;
     }
@@ -64,8 +93,8 @@ private:
         return 0;
     }
 
-    std::uint64_t pid_{0};
-    long page_size_{4096};
+    std::uint64_t root_pid_{0};
+    collector_scope scope_{collector_scope::process_tree};
 };
 }
 

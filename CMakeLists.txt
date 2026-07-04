@@ -23,6 +23,7 @@ set(perfm_common_sources
 if(WIN32)
     list(APPEND perfm_platform_sources
         src/process/child_process_win.cpp
+        src/process/process_tree_win.cpp
         src/collectors/cpu_collector_win.cpp
         src/collectors/memory_collector_win.cpp
         src/collectors/file_io_collector_win.cpp
@@ -31,6 +32,7 @@ if(WIN32)
 elseif(APPLE)
     list(APPEND perfm_platform_sources
         src/process/child_process_posix.cpp
+        src/process/process_tree_macos.cpp
         src/collectors/cpu_collector_macos.cpp
         src/collectors/memory_collector_macos.cpp
         src/collectors/file_io_collector_macos.cpp
@@ -39,6 +41,7 @@ elseif(APPLE)
 else()
     list(APPEND perfm_platform_sources
         src/process/child_process_posix.cpp
+        src/process/process_tree_linux.cpp
         src/collectors/cpu_collector_linux.cpp
         src/collectors/memory_collector_linux.cpp
         src/collectors/file_io_collector_linux.cpp

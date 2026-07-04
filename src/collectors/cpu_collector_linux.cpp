@@ -1,4 +1,5 @@
 #include "collectors/cpu_collector.h"
+#include "process/process_tree.h"
 
 #include <chrono>
 #include <fstream>
@@ -15,19 +16,26 @@ class cpu_collector final : public collector
 public:
     void start(std::uint64_t pid) override
     {
-        pid_ = pid;
+        start(pid, collector_scope::process_tree);
+    }
+
+    void start(std::uint64_t pid, collector_scope scope) override
+    {
+        root_pid_ = pid;
+        scope_ = scope;
         clock_ticks_ = sysconf(_SC_CLK_TCK);
         logical_cores_ = sysconf(_SC_NPROCESSORS_ONLN);
         last_wall_ = std::chrono::steady_clock::now();
-        last_ticks_ = read_process_ticks();
+        last_ticks_ = read_process_tree_ticks();
     }
 
     std::vector<metric_value> sample() override
     {
         const auto wall = std::chrono::steady_clock::now();
-        const auto ticks = read_process_ticks();
+        const auto ticks = read_process_tree_ticks();
         const auto wall_delta = std::chrono::duration<double>(wall - last_wall_).count();
-        const auto process_delta = static_cast<double>(ticks - last_ticks_) / static_cast<double>(clock_ticks_);
+        const auto tick_delta = ticks >= last_ticks_ ? ticks - last_ticks_ : 0;
+        const auto process_delta = static_cast<double>(tick_delta) / static_cast<double>(clock_ticks_);
         double percent = 0.0;
         if (wall_delta > 0.0)
         {
@@ -50,15 +58,15 @@ public:
     }
 
 private:
-    unsigned long long read_process_ticks() const
+    unsigned long long read_process_ticks(std::uint64_t pid) const
     {
-        std::ifstream input("/proc/" + std::to_string(pid_) + "/stat");
+        std::ifstream input("/proc/" + std::to_string(pid) + "/stat");
         std::string line;
         std::getline(input, line);
         const auto closing_paren = line.rfind(')');
         if (closing_paren == std::string::npos)
         {
-            return last_ticks_;
+            return 0;
         }
 
         std::istringstream fields(line.substr(closing_paren + 2));
@@ -80,7 +88,27 @@ private:
         return user_ticks + kernel_ticks;
     }
 
-    std::uint64_t pid_{0};
+    unsigned long long read_process_tree_ticks() const
+    {
+        unsigned long long total = 0;
+        for (const auto pid : target_pids())
+        {
+            total += read_process_ticks(pid);
+        }
+        return total;
+    }
+
+    std::vector<std::uint64_t> target_pids() const
+    {
+        if (scope_ == collector_scope::process_only)
+        {
+            return {root_pid_};
+        }
+        return enumerate_process_tree(root_pid_);
+    }
+
+    std::uint64_t root_pid_{0};
+    collector_scope scope_{collector_scope::process_tree};
     long clock_ticks_{100};
     long logical_cores_{1};
     std::chrono::steady_clock::time_point last_wall_{};

@@ -1,8 +1,10 @@
 #include "core/sampler.h"
+#include "process/process_tree.h"
 
 #include <cassert>
 #include <chrono>
 #include <string>
+#include <thread>
 
 namespace
 {
@@ -104,6 +106,27 @@ void sampler_records_elapsed_metric_only_on_final_sample()
     assert(has_metric_named(samples.back(), "elapsed_time_ms"));
     assert(process.exit_code() == 0);
 }
+
+void process_tree_includes_spawned_descendants()
+{
+    auto process = perfm::launch_child_process(PERFM_SPAWNER_PATH, {PERFM_SLEEPER_PATH, "700"});
+
+    bool found_descendant = false;
+    for (int attempt = 0; attempt < 20; ++attempt)
+    {
+        const auto pids = perfm::enumerate_process_tree(process.pid());
+        if (pids.size() >= 2)
+        {
+            found_descendant = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    assert(found_descendant);
+    process.wait();
+    assert(process.exit_code() == 0);
+}
 }
 
 void run_sampler_tests()
@@ -111,4 +134,5 @@ void run_sampler_tests()
     sampler_runs_collectors_until_process_exits();
     sampler_records_time_only_as_final_sample();
     sampler_records_elapsed_metric_only_on_final_sample();
+    process_tree_includes_spawned_descendants();
 }

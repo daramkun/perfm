@@ -102,6 +102,10 @@ int main(int argc, char** argv)
         perfm::sampler_config config;
         config.frequency = parsed.value.sample_frequency;
         config.include_elapsed_time = perfm::has_metric(parsed.value, perfm::metric_kind::time);
+        config.split_subprocesses = parsed.value.split_subprocesses;
+        config.collector_factory = [&parsed]() {
+            return perfm::make_selected_collectors(parsed.value);
+        };
         const auto samples = perfm::sample_process(process, collectors, config);
         const auto output = perfm::format_output(parsed.value, samples);
         const auto output_path = perfm::resolved_output_path(parsed.value);

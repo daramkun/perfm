@@ -11,6 +11,14 @@ namespace
 std::vector<std::string> collect_columns(const std::vector<sample>& samples)
 {
     std::vector<std::string> columns{"sample_ms"};
+    for (const auto& current : samples)
+    {
+        if (current.pid != 0)
+        {
+            columns.push_back("pid");
+            break;
+        }
+    }
     std::set<std::string> seen;
     for (const auto& current : samples)
     {
@@ -52,6 +60,10 @@ std::map<std::string, std::string> row_values(const sample& current)
 {
     std::map<std::string, std::string> values;
     values["sample_ms"] = std::to_string(current.elapsed.count());
+    if (current.pid != 0)
+    {
+        values["pid"] = std::to_string(current.pid);
+    }
     for (const auto& value : current.values)
     {
         values[value.name] = format_metric_value(value);
