@@ -50,9 +50,15 @@ currently running subprocesses. Use `--split-subproc` to emit separate per-PID
 rows for subprocesses observed at each sample point.
 
 ### current metric support notes
-GPU usage and GPU VRAM metrics are represented in the CLI and output schema, but
-portable providers are not implemented yet. They render as `unsupported` instead
-of failing the run.
+GPU usage and GPU VRAM metrics are implemented on Windows using Performance
+Counters. They are sampled for the target process and its currently running
+subprocesses, or as separate per-PID rows when `--split-subproc` is used.
+
+macOS GPU metrics are intentionally not implemented for now because this project
+does not provide per-process GPU accounting on macOS yet. Linux GPU metrics are
+also not implemented because there is no single common API across NVIDIA, AMD,
+and Intel drivers. On those platforms GPU metrics render as `unsupported`
+instead of failing the run.
 
 Per-process network I/O is not reliably available across supported operating
 systems without heavier tracing or elevated permissions. Network metrics are
