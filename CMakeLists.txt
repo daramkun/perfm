@@ -61,7 +61,7 @@ target_include_directories(perfm_core PUBLIC src)
 perfm_set_warnings(perfm_core)
 
 if(WIN32)
-    target_link_libraries(perfm_core PUBLIC psapi pdh iphlpapi)
+    target_link_libraries(perfm_core PUBLIC psapi pdh iphlpapi advapi32 shell32)
 elseif(APPLE)
     target_link_libraries(perfm_core PUBLIC "-framework CoreFoundation" "-framework IOKit")
 endif()

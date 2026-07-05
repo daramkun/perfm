@@ -88,6 +88,15 @@ void parser_accepts_stdout_graph_option()
     assert(parsed.value.mode == perfm::output_mode::stdout_table);
 }
 
+void parser_accepts_force_etw_option()
+{
+    auto parsed = perfm::parse_options({"--force-etw", "--cpu", "--network", "--", "tool"});
+    assert(parsed.ok);
+    assert(parsed.value.force_etw);
+    assert(contains_metric(parsed.value, perfm::metric_kind::cpu));
+    assert(contains_metric(parsed.value, perfm::metric_kind::network));
+}
+
 void parser_rejects_stdout_graph_with_non_stdout_output()
 {
     auto parsed = perfm::parse_options({"--as-json", "--stdout-graph", "--cpu", "--", "tool"});
@@ -108,5 +117,6 @@ void run_parser_tests()
     parser_accepts_split_subprocess_option();
     parser_accepts_json_and_summary_options();
     parser_accepts_stdout_graph_option();
+    parser_accepts_force_etw_option();
     parser_rejects_stdout_graph_with_non_stdout_output();
 }

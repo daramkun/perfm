@@ -29,7 +29,7 @@ parse_result error_result(std::string message)
 
 std::string format_usage()
 {
-    return "usage: perfm [options] [--summary] [--stdout-graph] [--split-subproc] -- <application filename> [application arguments]";
+    return "usage: perfm [options] [--summary] [--stdout-graph] [--force-etw] [--split-subproc] -- <application filename> [application arguments]";
 }
 
 parse_result parse_options(const std::vector<std::string>& arguments)
@@ -123,6 +123,10 @@ parse_result parse_options(const std::vector<std::string>& arguments)
         else if (arg == "--stdout-graph")
         {
             opts.stdout_graph = true;
+        }
+        else if (arg == "--force-etw")
+        {
+            opts.force_etw = true;
         }
         else if (starts_with(arg, "--freq="))
         {

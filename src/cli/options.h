@@ -26,6 +26,7 @@ struct options
     bool split_subprocesses{false};
     bool summary{false};
     bool stdout_graph{false};
+    bool force_etw{false};
     std::string target_path;
     std::vector<std::string> target_args;
 };
