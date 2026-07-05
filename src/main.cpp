@@ -68,6 +68,10 @@ std::string format_output(const options& opts, const std::vector<sample>& sample
     switch (opts.mode)
     {
     case output_mode::stdout_table:
+        if (opts.stdout_graph)
+        {
+            return format_stdout_graph(samples);
+        }
         return format_stdout(samples);
     case output_mode::csv:
         return format_csv(samples);

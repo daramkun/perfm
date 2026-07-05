@@ -25,6 +25,7 @@ struct options
     std::chrono::milliseconds sample_frequency{std::chrono::seconds(5)};
     bool split_subprocesses{false};
     bool summary{false};
+    bool stdout_graph{false};
     std::string target_path;
     std::vector<std::string> target_args;
 };

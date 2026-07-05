@@ -18,6 +18,7 @@ std::vector<perfm::sample> make_samples()
     second.elapsed = std::chrono::milliseconds(100);
     second.values.push_back(perfm::make_metric("elapsed_time_ms", perfm::metric_unit::milliseconds, 100));
     second.values.push_back(perfm::make_metric("cpu_percent", perfm::metric_unit::percent, 12.5));
+    second.values.push_back(perfm::make_metric("memory_resident_bytes", perfm::metric_unit::bytes, 1024 * 1024));
 
     return {first, second};
 }
@@ -33,7 +34,7 @@ void formatter_renders_stdout_columns_and_unsupported_values()
 void formatter_renders_csv_header_and_rows()
 {
     const auto text = perfm::format_csv(make_samples());
-    assert(text.find("sample_ms,elapsed_time_ms,gpu_percent,cpu_percent\n") == 0);
+    assert(text.find("sample_ms,elapsed_time_ms,gpu_percent,cpu_percent,memory_resident_bytes\n") == 0);
     assert(text.find("unsupported") != std::string::npos);
     assert(perfm::default_csv_path() == "perfm.csv");
 }
@@ -61,6 +62,15 @@ void formatter_renders_summaries()
     assert(text.find("metric,count,min,max,avg,last,unsupported,errors\n") == 0);
     assert(text.find("cpu_percent,1,12.50,12.50,12.50,12.50,0,0") != std::string::npos);
 }
+
+void formatter_renders_stdout_graph()
+{
+    const auto text = perfm::format_stdout_graph(make_samples());
+    assert(text.find("CPU") != std::string::npos);
+    assert(text.find("Memory") != std::string::npos);
+    assert(text.find("█") != std::string::npos);
+    assert(text.find("last") != std::string::npos);
+}
 }
 
 void run_formatter_tests()
@@ -70,4 +80,5 @@ void run_formatter_tests()
     formatter_renders_markdown_table();
     formatter_renders_json_samples();
     formatter_renders_summaries();
+    formatter_renders_stdout_graph();
 }

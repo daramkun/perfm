@@ -79,6 +79,25 @@ void parser_accepts_json_and_summary_options()
     assert(parsed.value.summary);
     assert(contains_metric(parsed.value, perfm::metric_kind::cpu));
 }
+
+void parser_accepts_stdout_graph_option()
+{
+    auto parsed = perfm::parse_options({"--as-stdout", "--stdout-graph", "--cpu", "--", "tool"});
+    assert(parsed.ok);
+    assert(parsed.value.stdout_graph);
+    assert(parsed.value.mode == perfm::output_mode::stdout_table);
+}
+
+void parser_rejects_stdout_graph_with_non_stdout_output()
+{
+    auto parsed = perfm::parse_options({"--as-json", "--stdout-graph", "--cpu", "--", "tool"});
+    assert(!parsed.ok);
+    assert(parsed.error.find("--stdout-graph") != std::string::npos);
+
+    auto summary = perfm::parse_options({"--stdout-graph", "--summary", "--cpu", "--", "tool"});
+    assert(!summary.ok);
+    assert(summary.error.find("--stdout-graph") != std::string::npos);
+}
 }
 
 void run_parser_tests()
@@ -88,4 +107,6 @@ void run_parser_tests()
     parser_rejects_invalid_frequency();
     parser_accepts_split_subprocess_option();
     parser_accepts_json_and_summary_options();
+    parser_accepts_stdout_graph_option();
+    parser_rejects_stdout_graph_with_non_stdout_output();
 }

@@ -23,6 +23,7 @@ $ perfm [options] -- <application filename> [application arguments]
 | --freq=<time> | frequency for measuring (5s, 1m, ...) |
 | --split-subproc | measure subprocesses as separate per-PID rows instead of aggregating them |
 | --summary | output per-metric summary rows instead of raw samples |
+| --stdout-graph | render Unicode block graphs for stdout output instead of the default table |
 
 ### support operating systems
 - Windows
@@ -43,6 +44,7 @@ perfm --as-stdout --cpu --mem --time -- <application filename>
 perfm --as-csv=sample.csv --cpu --mem --time -- <application filename>
 perfm --as-md=sample.md --file --network --gpu --vmem -- <application filename>
 perfm --as-json=sample.json --summary --cpu --mem --time -- <application filename>
+perfm --as-stdout --stdout-graph --cpu --mem --network --time -- <application filename>
 ```
 
 When `--as-csv` is used without a path, output is written to `perfm.csv`. When
@@ -52,6 +54,11 @@ When `--as-csv` is used without a path, output is written to `perfm.csv`. When
 `--time` records the target application's total elapsed wall-clock runtime. When
 it is combined with sampled metrics such as `--cpu` or `--mem`, the
 `elapsed_time_ms` metric is emitted on the final sample row.
+
+`--stdout-graph` is only available with `--as-stdout`, and cannot be combined
+with `--summary`. It renders Unicode block sparklines, so use a terminal with
+Unicode block support such as Windows Terminal, common Linux terminals, or
+Terminal.app on macOS.
 
 By default, process metrics are aggregated for the target process and its
 currently running subprocesses. Use `--split-subproc` to emit separate per-PID

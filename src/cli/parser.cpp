@@ -29,7 +29,7 @@ parse_result error_result(std::string message)
 
 std::string format_usage()
 {
-    return "usage: perfm [options] [--summary] [--split-subproc] -- <application filename> [application arguments]";
+    return "usage: perfm [options] [--summary] [--stdout-graph] [--split-subproc] -- <application filename> [application arguments]";
 }
 
 parse_result parse_options(const std::vector<std::string>& arguments)
@@ -120,6 +120,10 @@ parse_result parse_options(const std::vector<std::string>& arguments)
         {
             opts.summary = true;
         }
+        else if (arg == "--stdout-graph")
+        {
+            opts.stdout_graph = true;
+        }
         else if (starts_with(arg, "--freq="))
         {
             auto parsed = parse_duration(arg.substr(7));
@@ -148,6 +152,15 @@ parse_result parse_options(const std::vector<std::string>& arguments)
     for (; index < arguments.size(); ++index)
     {
         opts.target_args.push_back(arguments[index]);
+    }
+
+    if (opts.stdout_graph && opts.mode != output_mode::stdout_table)
+    {
+        return error_result("--stdout-graph requires --as-stdout");
+    }
+    if (opts.stdout_graph && opts.summary)
+    {
+        return error_result("--stdout-graph cannot be combined with --summary");
     }
 
     return {true, std::move(opts), {}};

@@ -19,6 +19,7 @@ set(perfm_common_sources
     src/output/markdown_formatter.cpp
     src/output/summary_formatter.cpp
     src/output/stdout_formatter.cpp
+    src/output/stdout_graph_formatter.cpp
     src/process/child_process.cpp
     src/collectors/gpu_collector.cpp
 )
