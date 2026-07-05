@@ -13,8 +13,11 @@ set(perfm_common_sources
     src/cli/duration_parser.cpp
     src/cli/parser.cpp
     src/core/sampler.cpp
+    src/core/summary.cpp
     src/output/csv_formatter.cpp
+    src/output/json_formatter.cpp
     src/output/markdown_formatter.cpp
+    src/output/summary_formatter.cpp
     src/output/stdout_formatter.cpp
     src/process/child_process.cpp
     src/collectors/gpu_collector.cpp

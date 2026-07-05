@@ -29,7 +29,7 @@ parse_result error_result(std::string message)
 
 std::string format_usage()
 {
-    return "usage: perfm [options] [--split-subproc] -- <application filename> [application arguments]";
+    return "usage: perfm [options] [--summary] [--split-subproc] -- <application filename> [application arguments]";
 }
 
 parse_result parse_options(const std::vector<std::string>& arguments)
@@ -74,6 +74,16 @@ parse_result parse_options(const std::vector<std::string>& arguments)
             opts.mode = output_mode::markdown;
             opts.output_path = arg.substr(8);
         }
+        else if (arg == "--as-json")
+        {
+            opts.mode = output_mode::json;
+            opts.output_path.reset();
+        }
+        else if (starts_with(arg, "--as-json="))
+        {
+            opts.mode = output_mode::json;
+            opts.output_path = arg.substr(10);
+        }
         else if (arg == "--cpu")
         {
             add_metric(opts, metric_kind::cpu);
@@ -105,6 +115,10 @@ parse_result parse_options(const std::vector<std::string>& arguments)
         else if (arg == "--split-subproc")
         {
             opts.split_subprocesses = true;
+        }
+        else if (arg == "--summary")
+        {
+            opts.summary = true;
         }
         else if (starts_with(arg, "--freq="))
         {

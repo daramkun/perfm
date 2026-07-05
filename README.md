@@ -12,15 +12,17 @@ $ perfm [options] -- <application filename> [application arguments]
 | --as-stdout | output as STDOUT (default) |
 | --as-csv[=<path>] | output as csv file |
 | --as-md[=<path>] | output as markdown table |
+| --as-json[=<path>] | output as json file |
 | --cpu | measure CPU usage percentage (average, per physical/logical core) |
 | --mem | measure memory usage (total, physical/virtual) |
 | --gpu | measure GPU usage percentage |
 | --vmem | measure GPU VRAM usage |
 | --file | measure Filesystem I/O usage |
 | --network | measure Network I/O usage |
-| --time | measure (end - start) time |
+| --time | measure total wall-clock runtime from process start to process exit, similar to `time <command>` |
 | --freq=<time> | frequency for measuring (5s, 1m, ...) |
 | --split-subproc | measure subprocesses as separate per-PID rows instead of aggregating them |
+| --summary | output per-metric summary rows instead of raw samples |
 
 ### support operating systems
 - Windows
@@ -31,7 +33,7 @@ $ perfm [options] -- <application filename> [application arguments]
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --config Debug
-ctest --test-dir build --output-on-failure
+ctest --test-dir build -C Debug --output-on-failure
 ```
 
 ### examples
@@ -40,10 +42,16 @@ perfm --time -- <application filename> [application arguments]
 perfm --as-stdout --cpu --mem --time -- <application filename>
 perfm --as-csv=sample.csv --cpu --mem --time -- <application filename>
 perfm --as-md=sample.md --file --network --gpu --vmem -- <application filename>
+perfm --as-json=sample.json --summary --cpu --mem --time -- <application filename>
 ```
 
 When `--as-csv` is used without a path, output is written to `perfm.csv`. When
-`--as-md` is used without a path, output is written to `perfm.md`.
+`--as-md` is used without a path, output is written to `perfm.md`. When
+`--as-json` is used without a path, output is written to `perfm.json`.
+
+`--time` records the target application's total elapsed wall-clock runtime. When
+it is combined with sampled metrics such as `--cpu` or `--mem`, the
+`elapsed_time_ms` metric is emitted on the final sample row.
 
 By default, process metrics are aggregated for the target process and its
 currently running subprocesses. Use `--split-subproc` to emit separate per-PID

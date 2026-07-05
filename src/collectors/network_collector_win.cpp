@@ -3,12 +3,15 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
 #endif
+#ifndef NTDDI_VERSION
+#define NTDDI_VERSION 0x06000000
+#endif
 
 #define NOMINMAX
+#include <winsock2.h>
 #include <windows.h>
+#include <netioapi.h>
 #include <iphlpapi.h>
-
-#include <memory>
 
 namespace perfm
 {
@@ -75,32 +78,26 @@ private:
     static network_counters read_system_counters()
     {
         network_counters total;
-        ULONG table_size = 0;
-        if (GetIfTable(nullptr, &table_size, FALSE) != ERROR_INSUFFICIENT_BUFFER || table_size == 0)
+        MIB_IF_TABLE2* table = nullptr;
+        if (GetIfTable2(&table) != NO_ERROR || table == nullptr)
         {
             return total;
         }
 
-        auto buffer = std::make_unique<unsigned char[]>(table_size);
-        auto* table = reinterpret_cast<MIB_IFTABLE*>(buffer.get());
-        if (GetIfTable(table, &table_size, FALSE) != NO_ERROR)
+        for (ULONG index = 0; index < table->NumEntries; ++index)
         {
-            return total;
-        }
-
-        for (DWORD index = 0; index < table->dwNumEntries; ++index)
-        {
-            const auto& row = table->table[index];
-            if (row.dwOperStatus != IF_OPER_STATUS_OPERATIONAL || row.dwType == IF_TYPE_SOFTWARE_LOOPBACK)
+            const auto& row = table->Table[index];
+            if (row.OperStatus != IfOperStatusUp || row.Type == IF_TYPE_SOFTWARE_LOOPBACK)
             {
                 continue;
             }
 
-            total.read_bytes += row.dwInOctets;
-            total.write_bytes += row.dwOutOctets;
+            total.read_bytes += row.InOctets;
+            total.write_bytes += row.OutOctets;
             total.has_value = true;
         }
 
+        FreeMibTable(table);
         return total;
     }
 

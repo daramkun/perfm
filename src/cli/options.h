@@ -13,7 +13,8 @@ enum class output_mode
 {
     stdout_table,
     csv,
-    markdown
+    markdown,
+    json
 };
 
 struct options
@@ -23,6 +24,7 @@ struct options
     std::vector<metric_kind> metrics;
     std::chrono::milliseconds sample_frequency{std::chrono::seconds(5)};
     bool split_subprocesses{false};
+    bool summary{false};
     std::string target_path;
     std::vector<std::string> target_args;
 };

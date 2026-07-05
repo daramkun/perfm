@@ -49,6 +49,22 @@ collector_list make_selected_collectors(const options& opts)
 
 std::string format_output(const options& opts, const std::vector<sample>& samples)
 {
+    if (opts.summary)
+    {
+        const auto summaries = summarize_samples(samples);
+        switch (opts.mode)
+        {
+        case output_mode::stdout_table:
+            return format_stdout_summary(summaries);
+        case output_mode::csv:
+            return format_csv_summary(summaries);
+        case output_mode::markdown:
+            return format_markdown_summary(summaries);
+        case output_mode::json:
+            return format_json_summary(summaries);
+        }
+    }
+
     switch (opts.mode)
     {
     case output_mode::stdout_table:
@@ -57,6 +73,8 @@ std::string format_output(const options& opts, const std::vector<sample>& sample
         return format_csv(samples);
     case output_mode::markdown:
         return format_markdown(samples);
+    case output_mode::json:
+        return format_json(samples);
     }
     return {};
 }
@@ -74,6 +92,10 @@ std::optional<std::string> resolved_output_path(const options& opts)
     if (opts.mode == output_mode::csv)
     {
         return default_csv_path();
+    }
+    if (opts.mode == output_mode::json)
+    {
+        return default_json_path();
     }
     return default_markdown_path();
 }

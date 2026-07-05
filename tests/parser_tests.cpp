@@ -69,6 +69,16 @@ void parser_accepts_split_subprocess_option()
     assert(parsed.value.split_subprocesses);
     assert(contains_metric(parsed.value, perfm::metric_kind::cpu));
 }
+
+void parser_accepts_json_and_summary_options()
+{
+    auto parsed = perfm::parse_options({"--as-json=out.json", "--summary", "--cpu", "--", "tool"});
+    assert(parsed.ok);
+    assert(parsed.value.mode == perfm::output_mode::json);
+    assert(parsed.value.output_path == "out.json");
+    assert(parsed.value.summary);
+    assert(contains_metric(parsed.value, perfm::metric_kind::cpu));
+}
 }
 
 void run_parser_tests()
@@ -77,4 +87,5 @@ void run_parser_tests()
     parser_uses_default_output_paths_later();
     parser_rejects_invalid_frequency();
     parser_accepts_split_subprocess_option();
+    parser_accepts_json_and_summary_options();
 }

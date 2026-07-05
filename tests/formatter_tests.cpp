@@ -45,6 +45,22 @@ void formatter_renders_markdown_table()
     assert(text.find("| --- | --- | --- | --- |") != std::string::npos);
     assert(perfm::default_markdown_path() == "perfm.md");
 }
+
+void formatter_renders_json_samples()
+{
+    const auto text = perfm::format_json(make_samples());
+    assert(text.find("\"samples\"") != std::string::npos);
+    assert(text.find("\"gpu_percent\": {\"state\":\"unsupported\",\"message\":\"unsupported\"}") != std::string::npos);
+    assert(perfm::default_json_path() == "perfm.json");
+}
+
+void formatter_renders_summaries()
+{
+    const auto summaries = perfm::summarize_samples(make_samples());
+    const auto text = perfm::format_csv_summary(summaries);
+    assert(text.find("metric,count,min,max,avg,last,unsupported,errors\n") == 0);
+    assert(text.find("cpu_percent,1,12.50,12.50,12.50,12.50,0,0") != std::string::npos);
+}
 }
 
 void run_formatter_tests()
@@ -52,4 +68,6 @@ void run_formatter_tests()
     formatter_renders_stdout_columns_and_unsupported_values();
     formatter_renders_csv_header_and_rows();
     formatter_renders_markdown_table();
+    formatter_renders_json_samples();
+    formatter_renders_summaries();
 }

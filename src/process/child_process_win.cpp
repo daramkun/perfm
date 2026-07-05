@@ -86,6 +86,38 @@ std::wstring build_command_line(const std::string& target_path, const std::vecto
     }
     return command;
 }
+
+std::string windows_error_message(DWORD error_code)
+{
+    LPWSTR buffer = nullptr;
+    const DWORD size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                     nullptr,
+                                     error_code,
+                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                     reinterpret_cast<LPWSTR>(&buffer),
+                                     0,
+                                     nullptr);
+    if (size == 0 || buffer == nullptr)
+    {
+        return "error code " + std::to_string(error_code);
+    }
+
+    std::wstring wide(buffer, size);
+    LocalFree(buffer);
+    while (!wide.empty() && (wide.back() == L'\r' || wide.back() == L'\n' || wide.back() == L'.' || wide.back() == L' '))
+    {
+        wide.pop_back();
+    }
+
+    const int needed = WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+    if (needed <= 0)
+    {
+        return "error code " + std::to_string(error_code);
+    }
+    std::string result(static_cast<std::size_t>(needed), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), result.data(), needed, nullptr, nullptr);
+    return result;
+}
 }
 
 child_process launch_child_process(const std::string& target_path, const std::vector<std::string>& target_args)
@@ -106,7 +138,7 @@ child_process launch_child_process(const std::string& target_path, const std::ve
                         &startup_info,
                         &process_info))
     {
-        throw std::runtime_error("failed to launch target process");
+        throw std::runtime_error("failed to launch target process: " + windows_error_message(GetLastError()));
     }
 
     child_process process;

@@ -1,4 +1,4 @@
-build/
+build*/
 out/
 .cache/
 cmake-build-*/
@@ -17,5 +17,6 @@ Testing/
 *.dylib
 perfm.csv
 perfm.md
+perfm.json
 sample.csv
 sample.md

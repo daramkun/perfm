@@ -40,6 +40,19 @@ sample collect_process_sample(std::uint64_t pid,
     return current;
 }
 
+void sleep_until_or_process_exit(child_process& process, std::chrono::steady_clock::time_point deadline)
+{
+    while (process.is_running())
+    {
+        const auto now = std::chrono::steady_clock::now();
+        if (now >= deadline)
+        {
+            break;
+        }
+        std::this_thread::sleep_until(std::min(deadline, now + std::chrono::milliseconds(25)));
+    }
+}
+
 std::vector<sample> sample_process_split(child_process& process, const sampler_config& config)
 {
     const auto start = std::chrono::steady_clock::now();
@@ -83,7 +96,7 @@ std::vector<sample> sample_process_split(child_process& process, const sampler_c
             samples.push_back(collect_process_sample(pid, ensure_collectors(pid), false, start));
         }
         next_sample += config.frequency;
-        std::this_thread::sleep_until(next_sample);
+        sleep_until_or_process_exit(process, next_sample);
     }
 
     if (config.include_elapsed_time)
@@ -138,7 +151,7 @@ std::vector<sample> sample_process(child_process& process, collector_list& colle
     {
         samples.push_back(collect_sample(collectors, false, start));
         next_sample += config.frequency;
-        std::this_thread::sleep_until(next_sample);
+        sleep_until_or_process_exit(process, next_sample);
     }
 
     const auto final_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
