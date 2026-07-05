@@ -6,10 +6,14 @@
 #include <windows.h>
 #include <pdh.h>
 #include <pdhmsg.h>
+#elif defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
 #endif
 
 #include <cctype>
 #include <cwctype>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
@@ -234,6 +238,195 @@ private:
 };
 #endif
 
+#ifdef __APPLE__
+std::optional<double> read_number_property(CFDictionaryRef dictionary, CFStringRef key)
+{
+    const auto value = CFDictionaryGetValue(dictionary, key);
+    if (value == nullptr || CFGetTypeID(value) != CFNumberGetTypeID())
+    {
+        return std::nullopt;
+    }
+
+    double number = 0.0;
+    if (!CFNumberGetValue(static_cast<CFNumberRef>(value), kCFNumberDoubleType, &number))
+    {
+        return std::nullopt;
+    }
+    return number;
+}
+
+std::optional<double> first_number_property(CFDictionaryRef dictionary, const CFStringRef* keys, std::size_t key_count)
+{
+    for (std::size_t index = 0; index < key_count; ++index)
+    {
+        const auto value = read_number_property(dictionary, keys[index]);
+        if (value.has_value())
+        {
+            return value;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<double> first_number_property_containing(CFDictionaryRef dictionary, const CFStringRef* needles, std::size_t needle_count)
+{
+    const auto count = CFDictionaryGetCount(dictionary);
+    if (count <= 0)
+    {
+        return std::nullopt;
+    }
+
+    std::vector<const void*> keys(static_cast<std::size_t>(count));
+    std::vector<const void*> values(static_cast<std::size_t>(count));
+    CFDictionaryGetKeysAndValues(dictionary, keys.data(), values.data());
+
+    for (CFIndex index = 0; index < count; ++index)
+    {
+        const auto key = static_cast<CFTypeRef>(keys[static_cast<std::size_t>(index)]);
+        const auto value = static_cast<CFTypeRef>(values[static_cast<std::size_t>(index)]);
+        if (key == nullptr || value == nullptr || CFGetTypeID(key) != CFStringGetTypeID() ||
+            CFGetTypeID(value) != CFNumberGetTypeID())
+        {
+            continue;
+        }
+
+        const auto key_string = static_cast<CFStringRef>(key);
+        for (std::size_t needle_index = 0; needle_index < needle_count; ++needle_index)
+        {
+            if (CFStringFind(key_string, needles[needle_index], kCFCompareCaseInsensitive).location == kCFNotFound)
+            {
+                continue;
+            }
+
+            double number = 0.0;
+            if (CFNumberGetValue(static_cast<CFNumberRef>(value), kCFNumberDoubleType, &number))
+            {
+                return number;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+class macos_system_gpu_collector final : public collector
+{
+public:
+    macos_system_gpu_collector(bool include_gpu_percent, bool include_vram)
+        : include_gpu_percent_(include_gpu_percent),
+          include_vram_(include_vram)
+    {
+    }
+
+    void start(std::uint64_t) override
+    {
+    }
+
+    std::vector<metric_value> sample() override
+    {
+        double gpu_percent = 0.0;
+        double vram_bytes = 0.0;
+        bool has_gpu_percent = false;
+        bool has_vram = false;
+
+        io_iterator_t iterator = IO_OBJECT_NULL;
+        if (IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IOAccelerator"), &iterator) == KERN_SUCCESS)
+        {
+            io_object_t service = IO_OBJECT_NULL;
+            while ((service = IOIteratorNext(iterator)) != IO_OBJECT_NULL)
+            {
+                const auto statistics =
+                    IORegistryEntryCreateCFProperty(service, CFSTR("PerformanceStatistics"), kCFAllocatorDefault, 0);
+                if (statistics != nullptr && CFGetTypeID(statistics) == CFDictionaryGetTypeID())
+                {
+                    read_statistics(static_cast<CFDictionaryRef>(statistics), gpu_percent, vram_bytes, has_gpu_percent, has_vram);
+                }
+                if (statistics != nullptr)
+                {
+                    CFRelease(statistics);
+                }
+                IOObjectRelease(service);
+            }
+            IOObjectRelease(iterator);
+        }
+
+        std::vector<metric_value> values;
+        if (include_gpu_percent_)
+        {
+            if (has_gpu_percent)
+            {
+                values.push_back(make_metric("gpu_percent", metric_unit::percent, gpu_percent));
+            }
+            else
+            {
+                values.push_back(make_unsupported_metric("gpu_percent", metric_unit::percent));
+            }
+        }
+        if (include_vram_)
+        {
+            if (has_vram)
+            {
+                values.push_back(make_metric("gpu_vram_bytes", metric_unit::bytes, vram_bytes));
+            }
+            else
+            {
+                values.push_back(make_unsupported_metric("gpu_vram_bytes", metric_unit::bytes));
+            }
+        }
+        return values;
+    }
+
+    void stop() override
+    {
+    }
+
+private:
+    static void read_statistics(CFDictionaryRef statistics,
+                                double& gpu_percent,
+                                double& vram_bytes,
+                                bool& has_gpu_percent,
+                                bool& has_vram)
+    {
+        const CFStringRef utilization_keys[] = {
+            CFSTR("Device Utilization %"),
+            CFSTR("Renderer Utilization %"),
+            CFSTR("Tiler Utilization %"),
+        };
+        const auto utilization = first_number_property(statistics, utilization_keys, std::size(utilization_keys));
+        if (utilization.has_value())
+        {
+            gpu_percent += *utilization;
+            has_gpu_percent = true;
+        }
+
+        const CFStringRef vram_keys[] = {
+            CFSTR("vramUsedBytes"),
+            CFSTR("In use video memory"),
+            CFSTR("In use system memory"),
+            CFSTR("Alloc system memory"),
+        };
+        const auto vram = first_number_property(statistics, vram_keys, std::size(vram_keys));
+        const CFStringRef vram_needles[] = {
+            CFSTR("vram"),
+            CFSTR("video memory"),
+            CFSTR("in use system memory"),
+            CFSTR("alloc system memory"),
+        };
+        const auto fallback_vram = vram.has_value()
+                                       ? vram
+                                       : first_number_property_containing(statistics, vram_needles, std::size(vram_needles));
+        if (fallback_vram.has_value())
+        {
+            vram_bytes += *fallback_vram;
+            has_vram = true;
+        }
+    }
+
+    bool include_gpu_percent_{false};
+    bool include_vram_{false};
+};
+#endif
+
 class unsupported_gpu_collector final : public collector
 {
 public:
@@ -275,6 +468,8 @@ collector_ptr make_gpu_collector(bool include_gpu_percent, bool include_vram)
 {
 #ifdef _WIN32
     return std::make_unique<windows_gpu_collector>(include_gpu_percent, include_vram);
+#elif defined(__APPLE__)
+    return std::make_unique<macos_system_gpu_collector>(include_gpu_percent, include_vram);
 #else
     return std::make_unique<unsupported_gpu_collector>(include_gpu_percent, include_vram);
 #endif

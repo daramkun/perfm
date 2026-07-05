@@ -54,12 +54,15 @@ GPU usage and GPU VRAM metrics are implemented on Windows using Performance
 Counters. They are sampled for the target process and its currently running
 subprocesses, or as separate per-PID rows when `--split-subproc` is used.
 
-macOS GPU metrics are intentionally not implemented for now because this project
-does not provide per-process GPU accounting on macOS yet. Linux GPU metrics are
-also not implemented because there is no single common API across NVIDIA, AMD,
-and Intel drivers. On those platforms GPU metrics render as `unsupported`
-instead of failing the run.
+On macOS, GPU metrics are system-wide values read from IOKit accelerator
+statistics. They are not per-process values, and `--split-subproc` does not make
+GPU metrics process-specific on macOS. On Apple Silicon, `gpu_vram_bytes` reports
+GPU-related unified/system memory usage when dedicated VRAM counters are not
+available. Linux GPU metrics are not implemented because there is no single
+common API across NVIDIA, AMD, and Intel drivers. On Linux, GPU metrics render as
+`unsupported` instead of failing the run.
 
-Per-process network I/O is not reliably available across supported operating
-systems without heavier tracing or elevated permissions. Network metrics are
-therefore emitted as `unsupported` in the initial implementation.
+Network metrics are system-wide interface byte deltas on Windows, Linux, and
+macOS. They are not per-process values. When `--split-subproc` is used, network
+metrics render as `unsupported` for per-PID rows instead of duplicating
+system-wide values.
