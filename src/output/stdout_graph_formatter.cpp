@@ -5,6 +5,7 @@
 #include <map>
 #include <optional>
 #include <sstream>
+#include <tuple>
 
 namespace perfm
 {
@@ -112,6 +113,10 @@ std::vector<graph_series> collect_series(const std::vector<sample>& samples)
     {
         for (const auto& value : current.values)
         {
+            if (value.name == "cpu_percent")
+            {
+                continue;
+            }
             auto key = std::make_pair(current.pid, value.name);
             auto& series = by_metric[key];
             series.pid = current.pid;
@@ -138,6 +143,25 @@ std::vector<graph_series> collect_series(const std::vector<sample>& samples)
     {
         series.push_back(std::move(item.second));
     }
+    std::sort(series.begin(), series.end(), [](const graph_series& left, const graph_series& right) {
+        const auto rank = [](const graph_series& item) {
+            int metric_rank = 100;
+            if (item.name == "cpu_total_percent")
+            {
+                metric_rank = 0;
+            }
+            else if (item.name.rfind("cpu_", 0) == 0 && item.name.find("_usage") != std::string::npos)
+            {
+                metric_rank = 1;
+            }
+            else if (item.name == "elapsed_time_ms")
+            {
+                metric_rank = 90;
+            }
+            return std::make_tuple(item.pid, std::string(section_name(item.name)), metric_rank, item.name);
+        };
+        return rank(left) < rank(right);
+    });
     return series;
 }
 

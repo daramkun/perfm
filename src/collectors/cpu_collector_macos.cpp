@@ -2,26 +2,13 @@
 #include "process/process_tree.h"
 
 #include <libproc.h>
-#include <sys/sysctl.h>
 
-#include <algorithm>
 #include <chrono>
 
 namespace perfm
 {
 namespace
 {
-int read_sysctl_int(const char* name, int fallback)
-{
-    int value = fallback;
-    std::size_t size = sizeof(value);
-    if (sysctlbyname(name, &value, &size, nullptr, 0) != 0 || value <= 0)
-    {
-        return fallback;
-    }
-    return value;
-}
-
 class cpu_collector final : public collector
 {
 public:
@@ -34,8 +21,6 @@ public:
     {
         root_pid_ = pid;
         scope_ = scope;
-        logical_cores_ = read_sysctl_int("hw.logicalcpu", 1);
-        physical_cores_ = read_sysctl_int("hw.physicalcpu", logical_cores_);
         last_wall_ = std::chrono::steady_clock::now();
         last_process_time_ns_ = read_process_tree_time_ns();
     }
@@ -59,8 +44,7 @@ public:
 
         return {
             make_metric("cpu_percent", metric_unit::percent, percent),
-            make_metric("cpu_percent_per_logical_core", metric_unit::percent, percent / std::max(1, logical_cores_)),
-            make_metric("cpu_percent_per_physical_core", metric_unit::percent, percent / std::max(1, physical_cores_)),
+            make_metric("cpu_total_percent", metric_unit::percent, percent),
         };
     }
 
@@ -100,8 +84,6 @@ private:
 
     std::uint64_t root_pid_{0};
     collector_scope scope_{collector_scope::process_tree};
-    int logical_cores_{1};
-    int physical_cores_{1};
     std::chrono::steady_clock::time_point last_wall_{};
     unsigned long long last_process_time_ns_{0};
 };

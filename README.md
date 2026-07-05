@@ -13,7 +13,7 @@ $ perfm [options] -- <application filename> [application arguments]
 | --as-csv[=<path>] | output as csv file |
 | --as-md[=<path>] | output as markdown table |
 | --as-json[=<path>] | output as json file |
-| --cpu | measure CPU usage percentage (average, per physical/logical core) |
+| --cpu | measure CPU usage percentage for the target process tree |
 | --mem | measure memory usage (total, physical/virtual) |
 | --gpu | measure GPU usage percentage |
 | --vmem | measure GPU VRAM usage |
@@ -81,3 +81,10 @@ Network metrics are system-wide interface byte deltas on Windows, Linux, and
 macOS. They are not per-process values. When `--split-subproc` is used, network
 metrics render as `unsupported` for per-PID rows instead of duplicating
 system-wide values.
+
+CPU metrics include `cpu_percent` and `cpu_total_percent` for the target process
+tree. On Linux, `--cpu` also emits best-effort per-core process metrics named
+`cpu_1_usage`, `cpu_2_usage`, and so on, where thread CPU time deltas are attributed to the CPU
+reported by `/proc/<pid>/task/<tid>/stat` at sample time. Windows and macOS keep
+CPU metrics at the process-tree total level because public APIs do not provide a
+simple stable per-core process attribution path.

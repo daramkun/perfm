@@ -4,7 +4,6 @@
 #define NOMINMAX
 #include <windows.h>
 
-#include <algorithm>
 #include <chrono>
 
 namespace perfm
@@ -31,9 +30,6 @@ public:
     {
         root_pid_ = pid;
         scope_ = scope;
-        SYSTEM_INFO info{};
-        GetSystemInfo(&info);
-        logical_cores_ = std::max<DWORD>(1, info.dwNumberOfProcessors);
         last_wall_ = std::chrono::steady_clock::now();
         last_process_time_ = read_process_tree_time();
     }
@@ -56,8 +52,7 @@ public:
 
         return {
             make_metric("cpu_percent", metric_unit::percent, percent),
-            make_metric("cpu_percent_per_logical_core", metric_unit::percent, percent / logical_cores_),
-            make_metric("cpu_percent_per_physical_core", metric_unit::percent, percent / logical_cores_),
+            make_metric("cpu_total_percent", metric_unit::percent, percent),
         };
     }
 
@@ -114,7 +109,6 @@ private:
 
     std::uint64_t root_pid_{0};
     collector_scope scope_{collector_scope::process_tree};
-    DWORD logical_cores_{1};
     std::chrono::steady_clock::time_point last_wall_{};
     unsigned long long last_process_time_{0};
 };

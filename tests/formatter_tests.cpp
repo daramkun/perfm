@@ -18,6 +18,7 @@ std::vector<perfm::sample> make_samples()
     second.elapsed = std::chrono::milliseconds(100);
     second.values.push_back(perfm::make_metric("elapsed_time_ms", perfm::metric_unit::milliseconds, 100));
     second.values.push_back(perfm::make_metric("cpu_percent", perfm::metric_unit::percent, 12.5));
+    second.values.push_back(perfm::make_metric("cpu_total_percent", perfm::metric_unit::percent, 12.5));
     second.values.push_back(perfm::make_metric("memory_resident_bytes", perfm::metric_unit::bytes, 1024 * 1024));
 
     return {first, second};
@@ -34,7 +35,7 @@ void formatter_renders_stdout_columns_and_unsupported_values()
 void formatter_renders_csv_header_and_rows()
 {
     const auto text = perfm::format_csv(make_samples());
-    assert(text.find("sample_ms,elapsed_time_ms,gpu_percent,cpu_percent,memory_resident_bytes\n") == 0);
+    assert(text.find("sample_ms,elapsed_time_ms,gpu_percent,cpu_percent,cpu_total_percent,memory_resident_bytes\n") == 0);
     assert(text.find("unsupported") != std::string::npos);
     assert(perfm::default_csv_path() == "perfm.csv");
 }
